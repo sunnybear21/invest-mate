@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data (recreated on deploy)
+data/*.db
+data/*.sqlite
+data/*.json
+*.db
+
+# Temp files
+*.html
+!templates/*.html
+charts/*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local config
+.env
+*.local
+
+# Zip files
+*.zip
+
+# Google API Keys (IMPORTANT - Never upload!)
+gen-lang-client-*.json
+*-service-account*.json
+*credentials*.json
+*secret*.json
+service-account*.json
