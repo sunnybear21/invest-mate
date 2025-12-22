@@ -231,20 +231,29 @@ class GSheetsBackend:
             return False, f"오류 발생: {e}"
 
     def add_journal_entry(self, user_id, data):
-        ws = self._get_worksheet("journal")
-        records = ws.get_all_records()
-        new_id = 1
-        if records:
-            new_id = max([int(r['id']) for r in records if str(r['id']).isdigit()] or [0]) + 1
-            
-        ws.append_row([
-            new_id, user_id, 
-            str(data['date']), str(data['code']), str(data['name']), str(data['side']),
-            data['entry_price'], data['exit_price'], data['qty'], data.get('fees', 0),
-            data['pnl'], data['roi'], str(data['strategy']), str(data['reason']),
-            str(data['mistake']), str(data['review'] or ''), str(data.get('image_path') or ''),
-            str(datetime.now())
-        ])
+        try:
+            ws = self._get_worksheet("journal")
+
+            # Use get_all_values instead of get_all_records (safer)
+            all_values = ws.get_all_values()
+            new_id = 1
+            if len(all_values) > 1:
+                for row in all_values[1:]:
+                    if row and row[0] and str(row[0]).isdigit():
+                        new_id = max(new_id, int(row[0]) + 1)
+
+            ws.append_row([
+                new_id, user_id,
+                str(data['date']), str(data['code']), str(data['name']), str(data['side']),
+                data['entry_price'], data['exit_price'], data['qty'], data.get('fees', 0),
+                data['pnl'], data['roi'], str(data['strategy']), str(data['reason']),
+                str(data['mistake']), str(data['review'] or ''), str(data.get('image_path') or ''),
+                str(datetime.now())
+            ])
+            print(f"[GSheets] Added journal entry {new_id} for user {user_id}")
+        except Exception as e:
+            print(f"[GSheets] add_journal_entry error: {e}")
+            raise e  # Re-raise so the UI can show an error
 
     def get_user_journal(self, user_id):
         ws = self._get_worksheet("journal")
