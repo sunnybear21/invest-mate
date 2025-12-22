@@ -5,6 +5,7 @@ import streamlit as st
 from datetime import datetime
 
 # --- Constants ---
+# Version 2.1 - Fixed GSheets initialization
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 DB_FILE = os.path.join(DB_DIR, 'app_database.db')
 
