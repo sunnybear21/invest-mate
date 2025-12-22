@@ -166,16 +166,27 @@ class GSheetsBackend:
             ws_journal.append_row(["id", "user_id", "date", "code", "name", "side", "entry_price", "exit_price", "qty", "fees", "pnl", "roi", "strategy", "reason", "mistake", "review", "image_path", "created_at"])
 
     def get_user_by_username(self, username):
-        ws = self._get_worksheet("users")
-        records = ws.get_all_records() # Returns list of dicts
-        for r in records:
-            if str(r['username']) == username:
-                p_hash = r['password_hash']
-                if isinstance(p_hash, str):
-                    p_hash = p_hash.encode('latin-1') 
-                
-                return {'id': r['id'], 'username': r['username'], 'password_hash': p_hash}
-        return None
+        try:
+            ws = self._get_worksheet("users")
+            records = ws.get_all_records() # Returns list of dicts
+            print(f"[GSheets] Looking for user: {username}, total records: {len(records)}")
+
+            for r in records:
+                # Check if required keys exist
+                if 'username' not in r or 'password_hash' not in r or 'id' not in r:
+                    print(f"[GSheets] Skipping malformed record: {r}")
+                    continue
+
+                if str(r['username']) == username:
+                    p_hash = r['password_hash']
+                    if isinstance(p_hash, str):
+                        p_hash = p_hash.encode('latin-1')
+
+                    return {'id': r['id'], 'username': r['username'], 'password_hash': p_hash}
+            return None
+        except Exception as e:
+            print(f"[GSheets] get_user_by_username error: {e}")
+            return None
 
     def create_user(self, username, password_hash):
         if self.get_user_by_username(username):
