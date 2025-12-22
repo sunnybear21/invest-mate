@@ -242,27 +242,26 @@ _db_instance = None
 
 def get_db():
     global _db_instance
-    if _db_instance: 
+    if _db_instance:
         return _db_instance
-    
+
     # Check if inside Streamlit Cloud with Secrets
     # We check for a specific key "gcp_service_account"
     try:
         if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
             try:
                 _db_instance = GSheetsBackend()
-                print("Using Google Sheets Backend")
+                st.sidebar.success("DB: Google Sheets")
             except Exception as e:
-                print(f"Failed to init GSheets: {e}. Falling back to SQLite.")
+                st.sidebar.error(f"GSheets Error: {e}")
                 _db_instance = SQLiteBackend()
         else:
             _db_instance = SQLiteBackend()
-            print("Using SQLite Backend")
-    except Exception:
-        # st.secrets access raises StreamlitSecretNotFoundError if no secrets file exists
-        print("Secrets not found. Using SQLite Backend")
+            st.sidebar.info("DB: SQLite (local)")
+    except Exception as e:
+        st.sidebar.warning(f"Secrets error: {e}")
         _db_instance = SQLiteBackend()
-        
+
     return _db_instance
 
 # --- Global Wrappers (For compatibility with app_main.py) ---

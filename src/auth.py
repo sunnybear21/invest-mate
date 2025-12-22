@@ -19,17 +19,24 @@ def login_user(username, password):
     """
     Logs in a user using the configured database backend.
     """
-    # Delegate to DB backend
-    user = get_user_by_username(username)
-    
-    if user:
-        p_hash = user['password_hash']
-        # Ensure p_hash is bytes for bcrypt
-        if isinstance(p_hash, str):
-             # If it was stored as string (e.g. latin-1 in GSheets), encode back to bytes
-             p_hash = p_hash.encode('latin-1')
+    try:
+        # Delegate to DB backend
+        user = get_user_by_username(username)
+        print(f"[Auth] Looking up user: {username}, found: {user is not None}")
 
-        if bcrypt.checkpw(password.encode('utf-8'), p_hash):
-            return user
-            
+        if user:
+            p_hash = user['password_hash']
+            # Ensure p_hash is bytes for bcrypt
+            if isinstance(p_hash, str):
+                # If it was stored as string (e.g. latin-1 in GSheets), encode back to bytes
+                p_hash = p_hash.encode('latin-1')
+
+            if bcrypt.checkpw(password.encode('utf-8'), p_hash):
+                print(f"[Auth] Password verified for {username}")
+                return user
+            else:
+                print(f"[Auth] Password mismatch for {username}")
+    except Exception as e:
+        print(f"[Auth] Login error: {e}")
+
     return None
