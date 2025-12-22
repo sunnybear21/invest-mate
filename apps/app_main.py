@@ -257,11 +257,7 @@ def show_login_page():
                     else:
                         st.error(msg)
                 
-    # Show DB status on login page (for debugging)
-    from src.database import get_db
-    db = get_db()
-    db_type = "Google Sheets" if "GSheets" in type(db).__name__ else "SQLite (local)"
-    st.markdown(f'<div style="text-align: center; margin-top: 20px; font-size: 11px; color: #52525b;">© 2025 Sunny Pro Investment. | DB: {db_type}</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center; margin-top: 20px; font-size: 11px; color: #52525b;">© 2025 Sunny Pro Investment.</div>', unsafe_allow_html=True)
 
 
 # --- DASHBOARD PAGE (Spec Implementation) ---
@@ -359,7 +355,6 @@ def show_dashboard():
                         st.error("Scanner not initialized. Please check pykrx installation.")
                         st.stop()
                     df = scanner._get_historical_data(t_code, days=120)
-                    st.write(f"Debug: DataFrame shape = {df.shape}, columns = {list(df.columns) if not df.empty else 'EMPTY'}")
                     if not df.empty:
                         smc = SMCAnalyzer()
                         
