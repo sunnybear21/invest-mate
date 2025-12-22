@@ -243,12 +243,33 @@ class LucyScannerRealtime:
     def _get_historical_data(self, code: str, days: int = 60) -> pd.DataFrame:
         """Get historical data from pykrx and merge with realtime Naver data"""
         if not PYKRX_AVAILABLE:
+            print(f"[Error] pykrx not available for code {code}")
             return pd.DataFrame()
         try:
             end = datetime.now().strftime("%Y%m%d")
             start = (datetime.now() - timedelta(days=days + 30)).strftime("%Y%m%d")
+            print(f"[Debug] Fetching {code} from {start} to {end}")
+
             df = pykrx_stock.get_market_ohlcv(start, end, code)
-            
+            print(f"[Debug] Got {len(df)} rows for {code}")
+
+            # Check if df has expected columns (handle Korean/English column names)
+            if not df.empty:
+                # Rename columns if needed (pykrx sometimes returns different names)
+                col_map = {
+                    'Open': '시가', 'High': '고가', 'Low': '저가',
+                    'Close': '종가', 'Volume': '거래량',
+                    '시가': '시가', '고가': '고가', '저가': '저가',
+                    '종가': '종가', '거래량': '거래량'
+                }
+                df = df.rename(columns=col_map)
+
+                # Ensure required columns exist
+                required = ['시가', '고가', '저가', '종가', '거래량']
+                missing = [c for c in required if c not in df.columns]
+                if missing:
+                    print(f"[Warning] Missing columns: {missing}, available: {df.columns.tolist()}")
+
             # [NEW] Merge Realtime Data
             try:
                 realtime = self._get_naver_realtime(code)
@@ -261,7 +282,7 @@ class LucyScannerRealtime:
                         '종가': realtime['price'],
                         '거래량': realtime['volume']
                     }
-                    
+
                     # Fallback for 0 values
                     if latest_data['시가'] == 0: latest_data['시가'] = latest_data['종가']
                     if latest_data['고가'] == 0: latest_data['고가'] = latest_data['종가']
@@ -280,22 +301,23 @@ class LucyScannerRealtime:
                         df = pd.DataFrame([latest_data], index=[today_dt])
                     else:
                         last_date = df.index[-1]
-                        
+
                         if last_date.date() == today_dt.date():
                             # Update existing today's row
                             for col in ['시가', '고가', '저가', '종가', '거래량']:
-                                df.at[last_date, col] = latest_data[col]
+                                if col in df.columns:
+                                    df.at[last_date, col] = latest_data[col]
                         else:
                             # Append new row for today
                             new_row = pd.DataFrame([latest_data], index=[today_dt])
                             df = pd.concat([df, new_row])
-                            
+
             except Exception as e:
-                # print(f"Realtime merge failed: {e}")
-                pass
+                print(f"[Warning] Realtime merge failed: {e}")
 
             return df.tail(days) if len(df) > days else df
-        except:
+        except Exception as e:
+            print(f"[Error] _get_historical_data failed for {code}: {e}")
             return pd.DataFrame()
 
     def _check_technical_conditions(self, df: pd.DataFrame) -> List[str]:

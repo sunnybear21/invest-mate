@@ -355,6 +355,7 @@ def show_dashboard():
                         st.error("Scanner not initialized. Please check pykrx installation.")
                         st.stop()
                     df = scanner._get_historical_data(t_code, days=120)
+                    st.write(f"Debug: DataFrame shape = {df.shape}, columns = {list(df.columns) if not df.empty else 'EMPTY'}")
                     if not df.empty:
                         smc = SMCAnalyzer()
                         
