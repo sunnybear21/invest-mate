@@ -291,11 +291,55 @@ class LucyScannerRealtime:
             print(f"[Error] _get_naver_historical failed: {e}")
             return pd.DataFrame()
 
+    def _get_yahoo_historical(self, code: str, days: int = 120) -> pd.DataFrame:
+        """Get historical OHLCV data from Yahoo Finance (works globally)"""
+        try:
+            import yfinance as yf
+
+            # Korean stocks: 005930 -> 005930.KS (KOSPI) or 005930.KQ (KOSDAQ)
+            # Try KOSPI first, then KOSDAQ
+            symbols_to_try = [f"{code}.KS", f"{code}.KQ"]
+
+            for symbol in symbols_to_try:
+                try:
+                    print(f"[Debug] Yahoo: Trying {symbol}")
+                    ticker = yf.Ticker(symbol)
+                    df = ticker.history(period=f"{days}d")
+
+                    if not df.empty:
+                        # Rename columns to Korean
+                        df = df.rename(columns={
+                            'Open': '시가',
+                            'High': '고가',
+                            'Low': '저가',
+                            'Close': '종가',
+                            'Volume': '거래량'
+                        })
+                        # Keep only needed columns
+                        cols_to_keep = ['시가', '고가', '저가', '종가', '거래량']
+                        df = df[[c for c in cols_to_keep if c in df.columns]]
+
+                        print(f"[Debug] Yahoo: Got {len(df)} rows for {symbol}")
+                        return df
+                except Exception as e:
+                    print(f"[Debug] Yahoo {symbol} failed: {e}")
+                    continue
+
+            print(f"[Warning] Yahoo: No data for {code}")
+            return pd.DataFrame()
+
+        except ImportError:
+            print("[Error] yfinance not installed")
+            return pd.DataFrame()
+        except Exception as e:
+            print(f"[Error] _get_yahoo_historical failed: {e}")
+            return pd.DataFrame()
+
     def _get_historical_data(self, code: str, days: int = 60) -> pd.DataFrame:
-        """Get historical data - try pykrx first, fallback to Naver"""
+        """Get historical data - try multiple sources"""
         df = pd.DataFrame()
 
-        # Try pykrx first
+        # 1. Try pykrx first (best for Korean stocks, but may not work on cloud)
         if PYKRX_AVAILABLE:
             try:
                 end = datetime.now().strftime("%Y%m%d")
@@ -306,7 +350,6 @@ class LucyScannerRealtime:
                 print(f"[Debug] pykrx: Got {len(df)} rows for {code}")
 
                 if not df.empty:
-                    # Rename columns if needed
                     col_map = {
                         'Open': '시가', 'High': '고가', 'Low': '저가',
                         'Close': '종가', 'Volume': '거래량',
@@ -318,9 +361,14 @@ class LucyScannerRealtime:
                 print(f"[Warning] pykrx failed: {e}")
                 df = pd.DataFrame()
 
-        # Fallback to Naver if pykrx failed or returned empty
+        # 2. Try Yahoo Finance (works globally, good fallback)
         if df.empty:
-            print(f"[Debug] Falling back to Naver chart API for {code}")
+            print(f"[Debug] Trying Yahoo Finance for {code}")
+            df = self._get_yahoo_historical(code, days + 30)
+
+        # 3. Try Naver as last resort
+        if df.empty:
+            print(f"[Debug] Trying Naver chart API for {code}")
             df = self._get_naver_historical(code, days + 30)
 
         if df.empty:
