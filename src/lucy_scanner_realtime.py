@@ -240,85 +240,129 @@ class LucyScannerRealtime:
 
         return results
 
-    def _get_historical_data(self, code: str, days: int = 60) -> pd.DataFrame:
-        """Get historical data from pykrx and merge with realtime Naver data"""
-        if not PYKRX_AVAILABLE:
-            print(f"[Error] pykrx not available for code {code}")
-            return pd.DataFrame()
+    def _get_naver_historical(self, code: str, days: int = 120) -> pd.DataFrame:
+        """Get historical OHLCV data from Naver Finance (no API key needed)"""
         try:
-            end = datetime.now().strftime("%Y%m%d")
-            start = (datetime.now() - timedelta(days=days + 30)).strftime("%Y%m%d")
-            print(f"[Debug] Fetching {code} from {start} to {end}")
+            # Naver sise API - get daily price data
+            url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count={days}&requestType=0"
+            resp = self.session.get(url, timeout=10)
 
-            df = pykrx_stock.get_market_ohlcv(start, end, code)
-            print(f"[Debug] Got {len(df)} rows for {code}")
+            if resp.status_code != 200:
+                print(f"[Error] Naver chart API returned {resp.status_code}")
+                return pd.DataFrame()
 
-            # Check if df has expected columns (handle Korean/English column names)
-            if not df.empty:
-                # Rename columns if needed (pykrx sometimes returns different names)
-                col_map = {
-                    'Open': '시가', 'High': '고가', 'Low': '저가',
-                    'Close': '종가', 'Volume': '거래량',
-                    '시가': '시가', '고가': '고가', '저가': '저가',
-                    '종가': '종가', '거래량': '거래량'
-                }
-                df = df.rename(columns=col_map)
+            # Parse XML response
+            import re
+            items = re.findall(r'<item data="([^"]+)"', resp.text)
 
-                # Ensure required columns exist
-                required = ['시가', '고가', '저가', '종가', '거래량']
-                missing = [c for c in required if c not in df.columns]
-                if missing:
-                    print(f"[Warning] Missing columns: {missing}, available: {df.columns.tolist()}")
+            if not items:
+                print(f"[Warning] No chart data found for {code}")
+                return pd.DataFrame()
 
-            # [NEW] Merge Realtime Data
-            try:
-                realtime = self._get_naver_realtime(code)
-                if realtime and realtime.get('price'):
-                    # Prepare row data
-                    latest_data = {
-                        '시가': realtime.get('open', 0),
-                        '고가': realtime.get('high', 0),
-                        '저가': realtime.get('low', 0),
-                        '종가': realtime['price'],
-                        '거래량': realtime['volume']
-                    }
+            rows = []
+            for item in items:
+                parts = item.split('|')
+                if len(parts) >= 6:
+                    # Format: date|open|high|low|close|volume
+                    try:
+                        date = pd.to_datetime(parts[0])
+                        rows.append({
+                            '시가': int(parts[1]),
+                            '고가': int(parts[2]),
+                            '저가': int(parts[3]),
+                            '종가': int(parts[4]),
+                            '거래량': int(parts[5])
+                        })
+                    except:
+                        continue
 
-                    # Fallback for 0 values
-                    if latest_data['시가'] == 0: latest_data['시가'] = latest_data['종가']
-                    if latest_data['고가'] == 0: latest_data['고가'] = latest_data['종가']
-                    if latest_data['저가'] == 0: latest_data['저가'] = latest_data['종가']
+            if not rows:
+                return pd.DataFrame()
 
-                    # Determine date
-                    today_dt = pd.to_datetime(datetime.now().date())
-                    if realtime.get('date'):
-                        try:
-                            # Naver date format: 2025.12.19
-                            today_dt = pd.to_datetime(realtime['date'])
-                        except:
-                            pass
+            # Create DataFrame with date index
+            dates = [pd.to_datetime(item.split('|')[0]) for item in items if len(item.split('|')) >= 6]
+            df = pd.DataFrame(rows, index=dates[:len(rows)])
+            df.index.name = '날짜'
 
-                    if df.empty:
-                        df = pd.DataFrame([latest_data], index=[today_dt])
-                    else:
-                        last_date = df.index[-1]
+            print(f"[Debug] Naver chart: Got {len(df)} rows for {code}")
+            return df
 
-                        if last_date.date() == today_dt.date():
-                            # Update existing today's row
-                            for col in ['시가', '고가', '저가', '종가', '거래량']:
-                                if col in df.columns:
-                                    df.at[last_date, col] = latest_data[col]
-                        else:
-                            # Append new row for today
-                            new_row = pd.DataFrame([latest_data], index=[today_dt])
-                            df = pd.concat([df, new_row])
-
-            except Exception as e:
-                print(f"[Warning] Realtime merge failed: {e}")
-
-            return df.tail(days) if len(df) > days else df
         except Exception as e:
-            print(f"[Error] _get_historical_data failed for {code}: {e}")
+            print(f"[Error] _get_naver_historical failed: {e}")
             return pd.DataFrame()
+
+    def _get_historical_data(self, code: str, days: int = 60) -> pd.DataFrame:
+        """Get historical data - try pykrx first, fallback to Naver"""
+        df = pd.DataFrame()
+
+        # Try pykrx first
+        if PYKRX_AVAILABLE:
+            try:
+                end = datetime.now().strftime("%Y%m%d")
+                start = (datetime.now() - timedelta(days=days + 30)).strftime("%Y%m%d")
+                print(f"[Debug] pykrx: Fetching {code} from {start} to {end}")
+
+                df = pykrx_stock.get_market_ohlcv(start, end, code)
+                print(f"[Debug] pykrx: Got {len(df)} rows for {code}")
+
+                if not df.empty:
+                    # Rename columns if needed
+                    col_map = {
+                        'Open': '시가', 'High': '고가', 'Low': '저가',
+                        'Close': '종가', 'Volume': '거래량',
+                        '시가': '시가', '고가': '고가', '저가': '저가',
+                        '종가': '종가', '거래량': '거래량'
+                    }
+                    df = df.rename(columns=col_map)
+            except Exception as e:
+                print(f"[Warning] pykrx failed: {e}")
+                df = pd.DataFrame()
+
+        # Fallback to Naver if pykrx failed or returned empty
+        if df.empty:
+            print(f"[Debug] Falling back to Naver chart API for {code}")
+            df = self._get_naver_historical(code, days + 30)
+
+        if df.empty:
+            print(f"[Error] All data sources failed for {code}")
+            return pd.DataFrame()
+
+        # Merge Realtime Data
+        try:
+            realtime = self._get_naver_realtime(code)
+            if realtime and realtime.get('price'):
+                latest_data = {
+                    '시가': realtime.get('open', 0),
+                    '고가': realtime.get('high', 0),
+                    '저가': realtime.get('low', 0),
+                    '종가': realtime['price'],
+                    '거래량': realtime['volume']
+                }
+
+                if latest_data['시가'] == 0: latest_data['시가'] = latest_data['종가']
+                if latest_data['고가'] == 0: latest_data['고가'] = latest_data['종가']
+                if latest_data['저가'] == 0: latest_data['저가'] = latest_data['종가']
+
+                today_dt = pd.to_datetime(datetime.now().date())
+                if realtime.get('date'):
+                    try:
+                        today_dt = pd.to_datetime(realtime['date'])
+                    except:
+                        pass
+
+                if not df.empty:
+                    last_date = df.index[-1]
+                    if hasattr(last_date, 'date') and last_date.date() == today_dt.date():
+                        for col in ['시가', '고가', '저가', '종가', '거래량']:
+                            if col in df.columns:
+                                df.at[last_date, col] = latest_data[col]
+                    else:
+                        new_row = pd.DataFrame([latest_data], index=[today_dt])
+                        df = pd.concat([df, new_row])
+        except Exception as e:
+            print(f"[Warning] Realtime merge failed: {e}")
+
+        return df.tail(days) if len(df) > days else df
 
     def _check_technical_conditions(self, df: pd.DataFrame) -> List[str]:
         """Check all technical conditions"""
