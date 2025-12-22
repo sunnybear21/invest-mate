@@ -24,7 +24,7 @@ except ImportError:
     from src.auth import login_user, register_user
 
 # --- Page Config ---
-st.set_page_config(page_title="Sunny Pro Dashboard", layout="wide", page_icon="☀️")
+st.set_page_config(page_title="Sunny Pro Dashboard", layout="wide", page_icon="📈")
 
 # Initialize DB
 init_db()
