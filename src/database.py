@@ -156,14 +156,31 @@ class GSheetsBackend:
             return self.sh.add_worksheet(title=name, rows=1000, cols=20)
 
     def init_db(self):
-        # Create headers if empty
-        ws_users = self._get_worksheet("users")
-        if not ws_users.get_all_values():
-            ws_users.append_row(["id", "username", "password_hash", "created_at"])
-            
-        ws_journal = self._get_worksheet("journal")
-        if not ws_journal.get_all_values():
-            ws_journal.append_row(["id", "user_id", "date", "code", "name", "side", "entry_price", "exit_price", "qty", "fees", "pnl", "roi", "strategy", "reason", "mistake", "review", "image_path", "created_at"])
+        # Create headers if empty or missing
+        try:
+            ws_users = self._get_worksheet("users")
+            all_values = ws_users.get_all_values()
+            # Check if first row has proper headers
+            if not all_values or len(all_values[0]) < 3 or all_values[0][0] != "id":
+                print("[GSheets] Initializing users sheet with headers")
+                ws_users.clear()
+                ws_users.append_row(["id", "username", "password_hash", "created_at"])
+            else:
+                print(f"[GSheets] users sheet OK, {len(all_values)-1} records")
+        except Exception as e:
+            print(f"[GSheets] init_db users error: {e}")
+
+        try:
+            ws_journal = self._get_worksheet("journal")
+            all_values = ws_journal.get_all_values()
+            if not all_values or len(all_values[0]) < 5 or all_values[0][0] != "id":
+                print("[GSheets] Initializing journal sheet with headers")
+                ws_journal.clear()
+                ws_journal.append_row(["id", "user_id", "date", "code", "name", "side", "entry_price", "exit_price", "qty", "fees", "pnl", "roi", "strategy", "reason", "mistake", "review", "image_path", "created_at"])
+            else:
+                print(f"[GSheets] journal sheet OK, {len(all_values)-1} records")
+        except Exception as e:
+            print(f"[GSheets] init_db journal error: {e}")
 
     def get_user_by_username(self, username):
         try:
@@ -189,19 +206,28 @@ class GSheetsBackend:
             return None
 
     def create_user(self, username, password_hash):
-        if self.get_user_by_username(username):
-            return False, "이미 존재하는 아이디입니다."
-        
-        ws = self._get_worksheet("users")
-        records = ws.get_all_records()
-        new_id = 1
-        if records:
-            new_id = max([int(r['id']) for r in records if str(r['id']).isdigit()] or [0]) + 1
-            
-        hash_str = password_hash.decode('latin-1')
-        
-        ws.append_row([new_id, username, hash_str, str(datetime.now())])
-        return True, "회원가입 성공!"
+        try:
+            if self.get_user_by_username(username):
+                return False, "이미 존재하는 아이디입니다."
+
+            ws = self._get_worksheet("users")
+
+            # Get all values to find max ID (safer than get_all_records)
+            all_values = ws.get_all_values()
+            new_id = 1
+            if len(all_values) > 1:  # Has data rows (not just header)
+                for row in all_values[1:]:  # Skip header
+                    if row and row[0] and str(row[0]).isdigit():
+                        new_id = max(new_id, int(row[0]) + 1)
+
+            hash_str = password_hash.decode('latin-1')
+
+            ws.append_row([new_id, username, hash_str, str(datetime.now())])
+            print(f"[GSheets] Created user {username} with id {new_id}")
+            return True, "회원가입 성공!"
+        except Exception as e:
+            print(f"[GSheets] create_user error: {e}")
+            return False, f"오류 발생: {e}"
 
     def add_journal_entry(self, user_id, data):
         ws = self._get_worksheet("journal")
