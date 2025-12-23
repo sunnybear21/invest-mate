@@ -184,7 +184,7 @@ class ChartGenerator:
                     opacity=0.8,
                     annotation_text=f"Fib {level_name} ({int(price):,})",
                     annotation_font_color=fib_colors.get(level_name, 'gray'),
-                    annotation_position="left"
+                    annotation_position="top right"
                 )
 
         # 3. Order Blocks (High Contrast Neon)
@@ -291,7 +291,7 @@ class ChartGenerator:
             plot_bgcolor='#121212',
             xaxis_rangeslider_visible=False,
             height=700,
-            margin=dict(l=180, r=40, t=50, b=40),
+            margin=dict(l=50, r=150, t=50, b=40),
             showlegend=False
         )
         return fig

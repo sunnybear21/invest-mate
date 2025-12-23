@@ -395,29 +395,29 @@ def show_dashboard():
                         # Filters
                         f1, f2 = st.columns([2, 1])
                         with f1:
-                            filter_pos = st.radio("Side", ["All", "Long", "Short"], horizontal=True, label_visibility="collapsed")
+                            filter_pos = st.radio("Side", ["전체", "매수", "매도"], horizontal=True, label_visibility="collapsed")
                         with f2:
                             pass # Spacer
-                            
+
                         # Build Data
                         rows = []
                         # OBs
                         for ob in obs:
                             is_bullish = "Bullish" in ob['type']
-                            if filter_pos == "Long" and not is_bullish: continue
-                            if filter_pos == "Short" and is_bullish: continue
-                            
+                            if filter_pos == "매수" and not is_bullish: continue
+                            if filter_pos == "매도" and is_bullish: continue
+
                             # Determine Entry & Stop based on OB type
                             if is_bullish:
-                                # Long: Entry near Top, Stop near Bottom
+                                # 매수: Entry near Top, Stop near Bottom
                                 entry_p = ob['top']
                                 stop_p = ob['bottom']
-                                type_label = "매수 (Long)"
+                                type_label = "매수"
                             else:
-                                # Short: Entry near Bottom, Stop near Top
+                                # 매도: Entry near Bottom, Stop near Top
                                 entry_p = ob['bottom']
                                 stop_p = ob['top']
-                                type_label = "매도 (Short)"
+                                type_label = "매도"
                             
                             rows.append({
                                 "구분": type_label,

@@ -252,13 +252,13 @@ with tab1:
                         
                         col_f1, col_f2 = st.columns([2, 1])
                         with col_f1:
-                            filter_type = st.radio("포지션 필터", ["전체", "매수(Long)", "매도(Short)"], horizontal=True, label_visibility="collapsed")
+                            filter_type = st.radio("포지션 필터", ["전체", "매수", "매도"], horizontal=True, label_visibility="collapsed")
                         with col_f2:
                             show_mitigated_memo = st.checkbox("해소된 구간 포함", value=False)
 
                         # Prepare data for display
                         memo_data = []
-                        
+
                         # Helper for filtering
                         def should_include(item_type, is_mitigated):
                             # 1. Mitigated Filter
@@ -266,8 +266,8 @@ with tab1:
                                 return False
                             # 2. Position Filter
                             is_bullish = "Bullish" in item_type
-                            if filter_type == "매수(Long)" and not is_bullish: return False
-                            if filter_type == "매도(Short)" and is_bullish: return False
+                            if filter_type == "매수" and not is_bullish: return False
+                            if filter_type == "매도" and is_bullish: return False
                             return True
 
                         # OB Data
