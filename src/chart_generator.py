@@ -291,7 +291,7 @@ class ChartGenerator:
             plot_bgcolor='#121212',
             xaxis_rangeslider_visible=False,
             height=700,
-            margin=dict(l=40, r=40, t=50, b=40),
+            margin=dict(l=120, r=40, t=50, b=40),
             showlegend=False
         )
         return fig
