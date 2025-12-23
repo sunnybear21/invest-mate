@@ -139,11 +139,11 @@ def save_data(df):
     df.to_csv(JOURNAL_FILE, index=False)
 
 # Main Title
-st.title("Trading Journal")
-st.caption("Dominating the market with disciplined execution.")
+st.title("매매 일지")
+st.caption("원칙을 지키는 트레이더가 시장을 지배한다.")
 
-# Tabs (No Emojis, Minimal)
-tab_entry, tab_dashboard, tab_history = st.tabs(["Journal Entry", "Analytics", "History"])
+# Tabs
+tab_entry, tab_dashboard, tab_history = st.tabs(["매매 기록", "분석", "히스토리"])
 
 # --- Tab 1: Entry ---
 with tab_entry:

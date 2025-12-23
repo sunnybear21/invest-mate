@@ -517,41 +517,48 @@ def show_dashboard():
                 # Use [1, 1, 1, 0.3] to make inputs slightly shorter width-wise (spacer at end)
                 c1, c2, c3, _ = st.columns([1, 1, 1, 0.3])
                 with c1:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">DATE</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">날짜</div>', unsafe_allow_html=True)
                     date = st.date_input("Date", datetime.now(), label_visibility="collapsed")
                 with c2:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">SYMBOL</div>', unsafe_allow_html=True)
-                    symbol = st.text_input("Symbol", placeholder="AAPL", label_visibility="collapsed")
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">종목코드</div>', unsafe_allow_html=True)
+                    symbol = st.text_input("Symbol", placeholder="005930", label_visibility="collapsed")
                 with c3:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">SIDE</div>', unsafe_allow_html=True)
-                    side = st.selectbox("Side", ["LONG", "SHORT"], label_visibility="collapsed")
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">포지션</div>', unsafe_allow_html=True)
+                    side = st.selectbox("Side", ["LONG (매수)", "SHORT (매도)"], label_visibility="collapsed")
                 
                 st.write("")
                 
                 # Row 2: Entry, Exit, Qty, Fees
                 r2c1, r2c2, r2c3, r2c4, _ = st.columns([1, 1, 1, 1, 0.3])
                 with r2c1:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">ENTRY PRICE</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">진입가</div>', unsafe_allow_html=True)
                     entry = st.number_input("Entry", min_value=0, step=100, format="%d", label_visibility="collapsed")
                 with r2c2:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">EXIT PRICE</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">청산가</div>', unsafe_allow_html=True)
                     exit_p = st.number_input("Exit", min_value=0, step=100, format="%d", label_visibility="collapsed")
                 with r2c3:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">QUANTITY</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">수량</div>', unsafe_allow_html=True)
                     qty = st.number_input("Qty", min_value=1, format="%d", label_visibility="collapsed")
                 with r2c4:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">FEES (TOTAL)</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">수수료</div>', unsafe_allow_html=True)
                     fees = st.number_input("Fees", min_value=0, step=10, format="%d", label_visibility="collapsed")
                 
                 st.write("")
                 
-                st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">STRATEGY / SETUP</div>', unsafe_allow_html=True)
-                strategy = st.selectbox("Strategy", ["Breakout (Trend Following)", "Pullback", "Reversal", "Range Bound"], label_visibility="collapsed")
+                st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">전략 / 셋업</div>', unsafe_allow_html=True)
+                strategy = st.selectbox("Strategy", [
+                    "세력 매집 (Accumulation)",
+                    "변동성 돌파 (Squeeze)",
+                    "눌림목 (Pullback)",
+                    "수급 주도주 (Leader)",
+                    "뉴스/테마 (News)",
+                    "뇌동매매 (Impulsive)"
+                ], label_visibility="collapsed")
                 
                 st.write("")
                 
-                st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">NOTES & REASONING</div>', unsafe_allow_html=True)
-                reason = st.text_area("Notes", height=100, placeholder="What was your thesis?", label_visibility="collapsed")
+                st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">진입 사유 / 메모</div>', unsafe_allow_html=True)
+                reason = st.text_area("Notes", height=100, placeholder="왜 이 종목을 샀나요?", label_visibility="collapsed")
                 
                 st.write("")
                 
