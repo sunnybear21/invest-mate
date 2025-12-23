@@ -182,7 +182,7 @@ class ChartGenerator:
                     line_color=fib_colors.get(level_name, 'gray'),
                     line_width=1.5,
                     opacity=0.8,
-                    annotation_text=f"{int(price):,}",
+                    annotation_text=f"{level_name} ({int(price):,})",
                     annotation_font_color=fib_colors.get(level_name, 'gray'),
                     annotation_position="top right"
                 )
