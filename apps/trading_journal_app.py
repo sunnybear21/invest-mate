@@ -108,15 +108,28 @@ if not os.path.exists(IMAGES_DIR):
 def load_data():
     if not os.path.exists(JOURNAL_FILE):
         return pd.DataFrame(columns=[
-            "Date", "Code", "Name", "Side", "EntryPrice", "ExitPrice", 
-            "Quantity", "PnL", "Return(%)", "Strategy", "Reason", "Mistake", "Review", "Image"
+            "날짜", "종목코드", "종목명", "포지션", "진입가", "청산가",
+            "수량", "손익", "수익률(%)", "전략", "진입사유", "실수", "복기", "이미지"
         ])
     try:
         df = pd.read_csv(JOURNAL_FILE)
-        df['Date'] = pd.to_datetime(df['Date']).dt.date
-        # Ensure Image column exists (for backward compatibility)
-        if 'Image' not in df.columns:
-            df['Image'] = None
+        # Handle both old English and new Korean column names
+        if 'Date' in df.columns:
+            df['날짜'] = pd.to_datetime(df['Date']).dt.date
+            df = df.drop(columns=['Date'])
+        elif '날짜' in df.columns:
+            df['날짜'] = pd.to_datetime(df['날짜']).dt.date
+        # Rename old English columns to Korean if they exist
+        rename_map = {
+            'Code': '종목코드', 'Name': '종목명', 'Side': '포지션',
+            'EntryPrice': '진입가', 'ExitPrice': '청산가', 'Quantity': '수량',
+            'PnL': '손익', 'Return(%)': '수익률(%)', 'Strategy': '전략',
+            'Reason': '진입사유', 'Mistake': '실수', 'Review': '복기', 'Image': '이미지'
+        }
+        df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+        # Ensure 이미지 column exists (for backward compatibility)
+        if '이미지' not in df.columns:
+            df['이미지'] = None
         return df
     except:
         return pd.DataFrame()
@@ -190,11 +203,11 @@ with tab_entry:
                             st.error(f"이미지 저장 실패: {e}")
 
                     new_data = {
-                        "Date": t_date, "Code": t_code, "Name": t_name, "Side": t_side,
-                        "EntryPrice": t_entry, "ExitPrice": t_exit, "Quantity": t_qty,
-                        "PnL": pnl, "Return(%)": round(ret_pct, 2),
-                        "Strategy": t_strategy, "Reason": t_reason, "Mistake": t_mistake, 
-                        "Review": "", "Image": image_filename
+                        "날짜": t_date, "종목코드": t_code, "종목명": t_name, "포지션": t_side,
+                        "진입가": t_entry, "청산가": t_exit, "수량": t_qty,
+                        "손익": pnl, "수익률(%)": round(ret_pct, 2),
+                        "전략": t_strategy, "진입사유": t_reason, "실수": t_mistake,
+                        "복기": "", "이미지": image_filename
                     }
                     
                     df = load_data()
@@ -210,19 +223,19 @@ with tab_entry:
         if not df.empty:
             # Display Recent Trades with Image Check
             for i, row in df.head(3).iterrows():
-                with st.expander(f"{row['Date']} {row['Name']} ({row['Return(%)']}%)"):
+                with st.expander(f"{row['날짜']} {row['종목명']} ({row['수익률(%)']}%)"):
                     c_a, c_b = st.columns([2, 1])
                     with c_a:
-                        st.write(f"**전략**: {row['Strategy']}")
-                        st.write(f"**사유**: {row['Reason']}")
-                        if row['Mistake']:
-                            st.error(f"실수: {row['Mistake']}")
+                        st.write(f"**전략**: {row['전략']}")
+                        st.write(f"**진입사유**: {row['진입사유']}")
+                        if row['실수']:
+                            st.error(f"실수: {row['실수']}")
                     with c_b:
-                        st.metric("수익금", f"{row['PnL']:,}원")
-                        if pd.notna(row['Image']) and row['Image']:
-                             img_path = os.path.join(IMAGES_DIR, row['Image'])
+                        st.metric("수익금", f"{row['손익']:,}원")
+                        if pd.notna(row['이미지']) and row['이미지']:
+                             img_path = os.path.join(IMAGES_DIR, row['이미지'])
                              if os.path.exists(img_path):
-                                 st.image(img_path, caption="Chart", use_container_width=True)
+                                 st.image(img_path, caption="차트", use_container_width=True)
         else:
             st.info("아직 기록된 매매가 없습니다.")
             
@@ -236,11 +249,11 @@ with tab_dashboard:
     if not df.empty:
         # KPI Cards
         total_trades = len(df)
-        win_trades = len(df[df['PnL'] > 0])
-        loss_trades = len(df[df['PnL'] <= 0])
+        win_trades = len(df[df['손익'] > 0])
+        loss_trades = len(df[df['손익'] <= 0])
         win_rate = (win_trades / total_trades) * 100 if total_trades > 0 else 0
-        total_pnl = df['PnL'].sum()
-        avg_ret = df['Return(%)'].mean()
+        total_pnl = df['손익'].sum()
+        avg_ret = df['수익률(%)'].mean()
         
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("총 매매 횟수", f"{total_trades}회")
@@ -255,33 +268,33 @@ with tab_dashboard:
         
         with col_charts1:
             st.subheader("📈 전략별 승률 분석")
-            strategy_stats = df.groupby('Strategy').apply(
+            strategy_stats = df.groupby('전략').apply(
                 lambda x: pd.Series({
-                    'Trades': len(x),
-                    'WinRate': (len(x[x['PnL'] > 0]) / len(x)) * 100
+                    '매매횟수': len(x),
+                    '승률': (len(x[x['손익'] > 0]) / len(x)) * 100
                 })
             ).reset_index()
-            
-            fig_bar = px.bar(strategy_stats, x='Strategy', y='WinRate', 
-                             color='WinRate', 
+
+            fig_bar = px.bar(strategy_stats, x='전략', y='승률',
+                             color='승률',
                              title="전략별 승률 (%)",
                              color_continuous_scale='RdYlGn',
-                             hover_data=['Trades'])
-            fig_bar.add_hline(y=50, line_dash="dot", line_color="white", annotation_text="BEP")
+                             hover_data=['매매횟수'])
+            fig_bar.add_hline(y=50, line_dash="dot", line_color="white", annotation_text="손익분기점")
             st.plotly_chart(fig_bar, use_container_width=True)
             
         with col_charts2:
             st.subheader("💸 누적 수익 곡선")
-            df_sorted = df.sort_values(by="Date")
-            df_sorted['Cumulative PnL'] = df_sorted['PnL'].cumsum()
-            
-            fig_line = px.line(df_sorted, x="Date", y="Cumulative PnL", markers=True, title="자산 증감 추이")
+            df_sorted = df.sort_values(by="날짜")
+            df_sorted['누적손익'] = df_sorted['손익'].cumsum()
+
+            fig_line = px.line(df_sorted, x="날짜", y="누적손익", markers=True, title="자산 증감 추이")
             fig_line.update_traces(line_color='#00E396', line_width=3)
             st.plotly_chart(fig_line, use_container_width=True)
             
         # Mistake Analysis
         st.subheader("⚠️ 나의 실수 패턴 (Top 5)")
-        mistakes = df['Mistake'].dropna().value_counts().head(5)
+        mistakes = df['실수'].dropna().value_counts().head(5)
         if not mistakes.empty:
             st.bar_chart(mistakes, color='#ff4b4b')
         else:
@@ -301,11 +314,11 @@ with tab_history:
         cols = st.columns(3)
         img_idx = 0
         for i, row in df.iterrows():
-            if pd.notna(row['Image']) and row['Image']:
-                img_path = os.path.join(IMAGES_DIR, row['Image'])
+            if pd.notna(row['이미지']) and row['이미지']:
+                img_path = os.path.join(IMAGES_DIR, row['이미지'])
                 if os.path.exists(img_path):
                     with cols[img_idx % 3]:
-                        st.image(img_path, caption=f"{row['Date']} {row['Name']} ({row['Return(%)']}%)", use_container_width=True)
+                        st.image(img_path, caption=f"{row['날짜']} {row['종목명']} ({row['수익률(%)']}%)", use_container_width=True)
                         img_idx += 1
                         
         st.markdown("---")

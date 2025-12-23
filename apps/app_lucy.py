@@ -118,6 +118,37 @@ with tab1:
         st.write("")
         run_btn = st.button("분석하기", type="primary")
 
+        st.write("")
+        c_chk1, c_chk2, c_chk3 = st.columns(3)
+        with c_chk1:
+            show_ob = st.checkbox("오더블록", value=True, key="lucy_ob")
+        with c_chk2:
+            show_fvg = st.checkbox("FVG", value=True, key="lucy_fvg")
+        with c_chk3:
+            show_fib = st.checkbox("피보나치", value=True, key="lucy_fib")
+
+        # 피보나치 설명 (체크 시 표시)
+        if show_fib:
+            with st.expander("📐 피보나치 되돌림 가이드", expanded=False):
+                st.markdown("""
+**피보나치 되돌림이란?**
+- 주가가 상승/하락 후 **얼마나 되돌아갈지** 예측하는 기술적 지표
+- 최근 60일간 스윙 고점/저점 기준으로 계산
+
+**핵심 레벨 해석:**
+| 레벨 | 의미 | 매매 전략 |
+|------|------|-----------|
+| **38.2%** | 약한 되돌림 | 강한 추세에서 첫 지지/저항 |
+| **50%** | 중간 되돌림 | 심리적 중요 구간 |
+| **61.8%** | 황금비율 ⭐ | 가장 중요한 지지/저항 |
+| **78.6%** | 깊은 되돌림 | 추세 전환 경계선 |
+
+**매매 활용법:**
+1. 🟢 **매수**: 상승 추세에서 61.8% 지지 확인 후 진입
+2. 🔴 **매도**: 하락 추세에서 38.2~50% 저항 확인 후 청산
+3. ⚠️ **주의**: 78.6% 이탈 시 추세 전환 가능성
+                """)
+
     if run_btn and target_code:
         try:
             with st.spinner("분석 중..."):
@@ -138,10 +169,11 @@ with tab1:
                     
                     analysis_result = {
                         'sr_levels': sr_levels,
-                        'obs': obs,
-                        'fvgs': fvgs
+                        'obs': obs if show_ob else [],
+                        'fvgs': fvgs if show_fvg else [],
+                        'show_fibonacci': show_fib
                     }
-                    
+
                     gen = ChartGenerator()
                     fig = gen.get_fig(df, analysis_result, target_code, name)
                     
