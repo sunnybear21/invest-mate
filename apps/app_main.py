@@ -513,18 +513,15 @@ def show_dashboard():
         with tab1:
             st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
             with st.form("journal_spec_form", border=False):
-                # Row 1: Date, Symbol, Side
-                # Use [1, 1, 1, 0.3] to make inputs slightly shorter width-wise (spacer at end)
-                c1, c2, c3, _ = st.columns([1, 1, 1, 0.3])
+                # Row 1: Date, Symbol
+                c1, c2, _ = st.columns([1, 1, 0.3])
                 with c1:
                     st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">날짜</div>', unsafe_allow_html=True)
                     date = st.date_input("Date", datetime.now(), label_visibility="collapsed")
                 with c2:
                     st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">종목코드</div>', unsafe_allow_html=True)
                     symbol = st.text_input("Symbol", placeholder="005930", label_visibility="collapsed")
-                with c3:
-                    st.markdown('<div style="font-size: 10px; font-weight: 600; color: #71717a; margin-bottom: 4px;">포지션</div>', unsafe_allow_html=True)
-                    side = st.selectbox("Side", ["LONG (매수)", "SHORT (매도)"], label_visibility="collapsed")
+                side = "매수"  # 매수→매도 기록 전용
                 
                 st.write("")
                 
@@ -576,8 +573,8 @@ def show_dashboard():
                 submit = st.form_submit_button("Save Entry", type="primary")
                 
                 if submit:
-                    # Gross PnL
-                    gross_pnl = (exit_p - entry) * qty if side == "LONG" else (entry - exit_p) * qty
+                    # Gross PnL (매수→매도: 청산가 - 진입가)
+                    gross_pnl = (exit_p - entry) * qty
                     # Net PnL (including fees)
                     pnl = gross_pnl - fees
                     roi = (pnl / (entry * qty))*100 if entry > 0 else 0
